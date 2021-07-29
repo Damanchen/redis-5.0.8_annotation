@@ -35,8 +35,10 @@ unsigned long long bioWaitStepOfType(int type);
 time_t bioOlderJobOfType(int type);
 void bioKillThreads(void);
 
-/* Background job opcodes */
-#define BIO_CLOSE_FILE    0 /* Deferred close(2) syscall. */
-#define BIO_AOF_FSYNC     1 /* Deferred AOF fsync. */
-#define BIO_LAZY_FREE     2 /* Deferred objects freeing. */
+/* Background job opcodes
+ * 几种后台任务的操作码
+ */
+#define BIO_CLOSE_FILE    0 /* Deferred close(2) syscall.  后台线程关闭 fd */
+#define BIO_AOF_FSYNC     1 /* Deferred AOF fsync. AOF 配置为 everysec，后台线程刷盘 */
+#define BIO_LAZY_FREE     2 /* Deferred objects freeing. 后台线程释放 key 内存 */
 #define BIO_NUM_OPS       3

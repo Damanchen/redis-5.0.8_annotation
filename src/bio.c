@@ -128,6 +128,10 @@ void bioInit(void) {
     }
 }
 
+// 创建后台任务
+// 主线程凡是需要把一个任务交给后台线程处理时，就会调用 bio.c 的 bioCreateBackgroundJob 函数
+// （相当于发布异步任务的函数），并指定该任务是上面 3 个的哪一类，把任务挂到对应类型
+// 的「链表」下（bio_jobs[type]），任务即发布成功（生产者任务完成）。
 void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     struct bio_job *job = zmalloc(sizeof(*job));
 
@@ -142,6 +146,9 @@ void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     pthread_mutex_unlock(&bio_mutex[type]);
 }
 
+// 执行后台任务
+// 消费者从链表中拿到生产者发过来的「任务类型 + 参数」，执行上面任务对应的方法即可。
+// 当然，由于是「多线程」读写链表数据，这个过程是需要「加锁」操作的。
 void *bioProcessBackgroundJobs(void *arg) {
     struct bio_job *job;
     unsigned long type = (unsigned long) arg;
