@@ -48,12 +48,19 @@ struct __attribute__ ((__packed__)) sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
 };
+
+/* __attribute__ ((__packed__))的作用就是告诉编译器，
+在编译 sdshdr8 结构时，不要使用字节对齐的方式，而是采用紧凑的方式分配内存，这样更省内存
+*/
 struct __attribute__ ((__packed__)) sdshdr8 {
-    uint8_t len; /* used */
-    uint8_t alloc; /* excluding the header and null terminator */
-    unsigned char flags; /* 3 lsb of type, 5 unused bits */
-    char buf[];
+    /* used 字符数组现有长度，
+    8位无符号整形能表示的字符数组长度（包括数组最后一位\0）不会超过 256 字节（2 的 8 次方）*/
+    uint8_t len; 
+    uint8_t alloc; /* excluding the header and null terminator 字符数组的已分配空间，不包括结构体和\0结束字符 */
+    unsigned char flags; /* 3 lsb of type, 5 unused bits SDS类型 */
+    char buf[]; /* 字符数组 */
 };
+
 struct __attribute__ ((__packed__)) sdshdr16 {
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
