@@ -518,6 +518,7 @@ uint64_t dictObjHash(const void *key) {
 }
 
 uint64_t dictSdsHash(const void *key) {
+    // hash 函数
     return dictGenHashFunction((unsigned char*)key, sdslen((char*)key));
 }
 
@@ -771,7 +772,12 @@ int incrementallyRehash(int dbid) {
  * to play well with copy-on-write (otherwise when a resize happens lots of
  * memory pages are copied). The goal of this function is to update the ability
  * for dict.c to resize the hash tables accordingly to the fact we have o not
- * running childs. */
+ * running childs.
+ * 当hash表的 load factor 大于等于 1 时，Redis 会判断 dict_can_resize 这个变量值，查看当前是否可以进行扩容；
+ * 只有当前没有 RDB 子进程，并且也没有 AOF 子进程时才能进行 rehash 扩容（为避免父进程大量写时复制）
+ * 
+ * 如果 load factor 大于 5 时，就表明 Hash 表已经过载比较严重了，需要立刻进行库扩容，就不会判断这个条件
+ *  */
 void updateDictResizePolicy(void) {
     if (server.rdb_child_pid == -1 && server.aof_child_pid == -1)
         dictEnableResize();
@@ -2094,6 +2100,7 @@ void initServer(void) {
 
     /* Create the Redis databases, and initialize other internal state. */
     for (j = 0; j < server.dbnum; j++) {
+        // dbDictType 中指定了哈希函数
         server.db[j].dict = dictCreate(&dbDictType,NULL);
         server.db[j].expires = dictCreate(&keyptrDictType,NULL);
         server.db[j].blocking_keys = dictCreate(&keylistDictType,NULL);
