@@ -612,13 +612,18 @@ typedef struct RedisModuleDigest {
 #define LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
 
 #define OBJ_SHARED_REFCOUNT INT_MAX
+
+// redisObject采用 位域定义方法，可以用来有效地节省内存开销
+// XXX 占用几个字节？ 0.5+0.5+3+4+1 = 9 个字节？
 typedef struct redisObject {
-    unsigned type:4;
-    unsigned encoding:4;
+    unsigned type:4;        //redisObject的数据类型，4个bits
+    unsigned encoding:4;    //redisObject的编码类型，4个bits
+    //redisObject的LRU时间或者LFU data，LRU_BITS为24个bits
+    // 由 最低 8 位有效位 频率 和 最高 16 位有效位 访问时间 组成
     unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
-    int refcount;
+    int refcount;       //redisObject的引用计数，4个字节
     void *ptr;
 } robj;
 

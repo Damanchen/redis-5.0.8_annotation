@@ -50,7 +50,8 @@ struct __attribute__ ((__packed__)) sdshdr5 {
 };
 
 /* __attribute__ ((__packed__))的作用就是告诉编译器，
-在编译 sdshdr8 结构时，不要使用字节对齐的方式，而是采用紧凑的方式分配内存，这样更省内存
+ 在编译 sdshdr8 结构时，不要使用字节对齐的方式，而是采用紧凑的方式分配内存，这样更省内存
+ XXX 占用几个字节？ 1+1+1 = 3 个字节？
 */
 struct __attribute__ ((__packed__)) sdshdr8 {
     /* used 字符数组现有长度，

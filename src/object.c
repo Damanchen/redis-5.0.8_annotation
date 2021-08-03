@@ -39,9 +39,13 @@
 /* ===================== Creation and parsing of objects ==================== */
 
 robj *createObject(int type, void *ptr) {
+    // 给redisObject结构体分配空间
     robj *o = zmalloc(sizeof(*o));
+    //设置redisObject的类型
     o->type = type;
+    //设置redisObject的编码类型，此处是OBJ_ENCODING_RAW，表示常规的SDS
     o->encoding = OBJ_ENCODING_RAW;
+    //直接将传入的指针赋值给redisObject中的指针。
     o->ptr = ptr;
     o->refcount = 1;
 
@@ -75,18 +79,27 @@ robj *makeObjectShared(robj *o) {
 /* Create a string object with encoding OBJ_ENCODING_RAW, that is a plain
  * string object where o->ptr points to a proper sds string. */
 robj *createRawStringObject(const char *ptr, size_t len) {
+    // 指向 SDS 结构的指针是由 sdsnewlen 函数返回的，而 sdsnewlen 函数正是用来创建 SDS 结构的
     return createObject(OBJ_STRING, sdsnewlen(ptr,len));
 }
 
 /* Create a string object with encoding OBJ_ENCODING_EMBSTR, that is
  * an object where the sds string is actually an unmodifiable string
- * allocated in the same chunk as the object itself. */
+ * allocated in the same chunk as the object itself.
+ * 创建 嵌入式字符串，使用一块连续的内存空间，来同时保存 redisObject 和 SDS 结构，减少内存使用和内存碎片
+ *  */
 robj *createEmbeddedStringObject(const char *ptr, size_t len) {
+    // 这块内存空间的大小等于 redisObject 结构体的大小、SDS 结构头 sdshdr8 的大小和字符串大小的总和，并且再加上 1 字节。
+    // 注意，这里最后的 1 字节是 SDS 中加在字符串最后的结束字符“\0”
     robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr8)+len+1);
+    // o 是 redisObject 结构体的变量，o+1 表示将内存地址从变量 o 开始移动一段距离，而移动的距离等于 redisObject 这个结构体的大小
+    // 移动之后，sh 指向的地址就是 SDS 结构的起始地址
     struct sdshdr8 *sh = (void*)(o+1);
 
     o->type = OBJ_STRING;
     o->encoding = OBJ_ENCODING_EMBSTR;
+    // sh+1 表示把内存地址从 sh 起始地址开始移动一定的大小，移动的距离等于 sdshdr8 结构体的大小；
+    // XXX 因为 sdshdr8 大小为 1字节 ？？？
     o->ptr = sh+1;
     o->refcount = 1;
     if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
@@ -95,12 +108,15 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
         o->lru = LRU_CLOCK();
     }
 
+    // 定义 SDS 的 len、alloc大小、flags
     sh->len = len;
     sh->alloc = len;
     sh->flags = SDS_TYPE_8;
     if (ptr == SDS_NOINIT)
         sh->buf[len] = '\0';
     else if (ptr) {
+        // 把参数中传入的指针 ptr 指向的字符串，拷贝到 SDS 结构体中的字符数组，并在数组最后添加结束字符
+        // 这样就完成了 redisObject 的创建和赋值操作了
         memcpy(sh->buf,ptr,len);
         sh->buf[len] = '\0';
     } else {
@@ -117,8 +133,10 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
  * we allocate as EMBSTR will still fit into the 64 byte arena of jemalloc. */
 #define OBJ_ENCODING_EMBSTR_SIZE_LIMIT 44
 robj *createStringObject(const char *ptr, size_t len) {
+    //字符串长度小于等于44字节，创建嵌入式字符串
     if (len <= OBJ_ENCODING_EMBSTR_SIZE_LIMIT)
         return createEmbeddedStringObject(ptr,len);
+    // 字符串长度大于44字节，创建普通字符串
     else
         return createRawStringObject(ptr,len);
 }
