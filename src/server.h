@@ -815,21 +815,30 @@ struct sharedObjectsStruct {
 
 /* ZSETs use a specialized version of Skiplists */
 typedef struct zskiplistNode {
+    //Sorted Set中的元素
     sds ele;
+    //元素权重值
     double score;
+    //后向指针，便于从跳表的尾结点进行倒序查找
     struct zskiplistNode *backward;
+    //节点的level数组，保存每层上的前向指针和跨度
     struct zskiplistLevel {
+        // 指向下一结点的前向指针，使得结点可以在某一层上和后续结点连接起来
         struct zskiplistNode *forward;
+        // 跨度，这是用来记录结点在某一层上的*forward指针和该指针指向的结点之间，跨越了 level0 上的几个结点。
         unsigned long span;
     } level[];
 } zskiplistNode;
 
+// 跳表其实就是一种多层的有序链表
 typedef struct zskiplist {
     struct zskiplistNode *header, *tail;
     unsigned long length;
     int level;
 } zskiplist;
 
+// Sorted Set 这种同时采用跳表和哈希表两个索引结构的设计
+// 充分利用了跳表高效支持范围查询（如 ZRANGEBYSCORE 操作），以及哈希表高效支持单点查询（如 ZSCORE 操作）的特征。
 typedef struct zset {
     dict *dict;
     zskiplist *zsl;
