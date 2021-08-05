@@ -35,6 +35,8 @@
 typedef struct intset {
     uint32_t encoding;
     uint32_t length;
+    // 整数集合结构体中记录数据的部分，就是一个 int8_t 类型的整数数组 contents。
+    // 从内存使用的角度来看，整数数组就是一块连续内存空间，所以这样就避免了内存碎片，并提升了内存使用效率。
     int8_t contents[];
 } intset;
 

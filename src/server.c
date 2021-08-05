@@ -1447,6 +1447,7 @@ void createSharedObjects(void) {
     int j;
 
     shared.crlf = createObject(OBJ_STRING,sdsnew("\r\n"));
+    //常见回复信息
     shared.ok = createObject(OBJ_STRING,sdsnew("+OK\r\n"));
     shared.err = createObject(OBJ_STRING,sdsnew("-ERR\r\n"));
     shared.emptybulk = createObject(OBJ_STRING,sdsnew("$0\r\n\r\n"));
@@ -1461,6 +1462,8 @@ void createSharedObjects(void) {
     shared.emptyscan = createObject(OBJ_STRING,sdsnew("*2\r\n$1\r\n0\r\n*0\r\n"));
     shared.wrongtypeerr = createObject(OBJ_STRING,sdsnew(
         "-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"));
+
+    //常见报错信息
     shared.nokeyerr = createObject(OBJ_STRING,sdsnew(
         "-ERR no such key\r\n"));
     shared.syntaxerr = createObject(OBJ_STRING,sdsnew(
@@ -1469,6 +1472,7 @@ void createSharedObjects(void) {
         "-ERR source and destination objects are the same\r\n"));
     shared.outofrangeerr = createObject(OBJ_STRING,sdsnew(
         "-ERR index out of range\r\n"));
+
     shared.noscripterr = createObject(OBJ_STRING,sdsnew(
         "-NOSCRIPT No matching script. Please use EVAL.\r\n"));
     shared.loadingerr = createObject(OBJ_STRING,sdsnew(
@@ -1519,6 +1523,8 @@ void createSharedObjects(void) {
     shared.rpoplpush = createStringObject("RPOPLPUSH",9);
     shared.zpopmin = createStringObject("ZPOPMIN",7);
     shared.zpopmax = createStringObject("ZPOPMAX",7);
+
+    //0到9999的整数
     for (j = 0; j < OBJ_SHARED_INTEGERS; j++) {
         shared.integers[j] =
             makeObjectShared(createObject(OBJ_STRING,(void*)(long)j));
