@@ -99,7 +99,8 @@ robj *createEmbeddedStringObject(const char *ptr, size_t len) {
     o->type = OBJ_STRING;
     o->encoding = OBJ_ENCODING_EMBSTR;
     // sh+1 表示把内存地址从 sh 起始地址开始移动一定的大小，移动的距离等于 sdshdr8 结构体的大小；
-    // XXX 因为 sdshdr8 大小为 1字节 ？？？
+    // 这个加1为啥就能移动sdshdr8 结构体的大小？？因为 sdshdr8 大小为 1字节 ？？？ 不是！
+    // 地址+1 根据指针的类型不同而不同，+1尺度是由此指针指向的元素的大小就决定的，这里相当于移动 sizeof(sdshdr8 *sh)
     o->ptr = sh+1;
     o->refcount = 1;
     if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {

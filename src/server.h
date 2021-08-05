@@ -614,7 +614,8 @@ typedef struct RedisModuleDigest {
 #define OBJ_SHARED_REFCOUNT INT_MAX
 
 // redisObject采用 位域定义方法，可以用来有效地节省内存开销
-// XXX 占用几个字节？ 0.5+0.5+3+4+1 = 9 个字节？
+// 占用 16 个字节？ 0.5+0.5+3+4+8 = 16 个字节 
+// 64位系统下，指针占用 8 个字节
 typedef struct redisObject {
     unsigned type:4;        //redisObject的数据类型，4个bits
     unsigned encoding:4;    //redisObject的编码类型，4个bits
@@ -624,7 +625,7 @@ typedef struct redisObject {
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
     int refcount;       //redisObject的引用计数，4个字节
-    void *ptr;
+    void *ptr;      //指向值的指针，8个字节
 } robj;
 
 /* Macro used to initialize a Redis object allocated on the stack.
