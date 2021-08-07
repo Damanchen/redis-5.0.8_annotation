@@ -415,6 +415,7 @@ _quicklistNodeSizeMeetsOptimizationRequirement(const size_t sz,
     }
 }
 
+// 单个 ziplist 是否不超过 8KB
 #define sizeMeetsSafetyLimit(sz) ((sz) <= SIZE_SAFETY_LIMIT)
 
 REDIS_STATIC int _quicklistNodeAllowInsert(const quicklistNode *node,
@@ -438,7 +439,13 @@ REDIS_STATIC int _quicklistNodeAllowInsert(const quicklistNode *node,
         ziplist_overhead += 5;
 
     /* new_sz overestimates if 'sz' encodes to an integer type */
+    // 新插入元素后的大小（new_sz），这个大小等于 quicklistNode 的当前大小（node->sz）、
+    // 插入元素的大小（sz），以及插入元素后 ziplist 的 prevlen 占用大小。
     unsigned int new_sz = node->sz + sz + ziplist_overhead;
+    /* 在计算完大小之后，_quicklistNodeAllowInsert 函数会依次判断新插入的数据大小（sz）是否满足要求，
+    即单个 ziplist 是否不超过 8KB，或是单个 ziplist 里的元素个数是否满足要求。
+    只要这里面的一个条件能满足，quicklist 就可以在当前的 quicklistNode 中插入新元素，
+    否则 quicklist 就会新建一个 quicklistNode，以此来保存新插入的元素。 */
     if (likely(_quicklistNodeSizeMeetsOptimizationRequirement(new_sz, fill)))
         return 1;
     else if (!sizeMeetsSafetyLimit(new_sz))

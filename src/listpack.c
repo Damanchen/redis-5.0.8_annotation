@@ -42,7 +42,9 @@
 #include "listpack.h"
 #include "listpack_malloc.h"
 
+// 其中 4 个字节是记录 listpack 的总字节数，2 个字节是记录 listpack 的元素数量
 #define LP_HDR_SIZE 6       /* 32 bit total len + 16 bit number of elements. */
+
 #define LP_HDR_NUMELE_UNKNOWN UINT16_MAX
 #define LP_MAX_INT_ENCODING_LEN 9
 #define LP_MAX_BACKLEN_SIZE 5
@@ -50,22 +52,37 @@
 #define LP_ENCODING_INT 0
 #define LP_ENCODING_STRING 1
 
+// listpack 元素会对不同长度的整数和字符串进行编码 ！！！
+
+// 表示元素的实际数据是一个 7 bit 的无符号整数
+// 因为编码类型和元素实际数据共用 1 个字节，这个字节的最高位为 0，表示编码类型，
+// 而后续的 7 位用来存储 7 bit 的无符号整数
 #define LP_ENCODING_7BIT_UINT 0
 #define LP_ENCODING_7BIT_UINT_MASK 0x80
 #define LP_ENCODING_IS_7BIT_UINT(byte) (((byte)&LP_ENCODING_7BIT_UINT_MASK)==LP_ENCODING_7BIT_UINT)
 
+// 编码类型占 1 字节。该类型的宏定义值是 0x80，对应的二进制值是 1000 0000，这其中的前 2 位是用来标识编码类型本身，
+// 而后 6 位保存的是字符串长度。然后，列表项中的数据部分保存了实际的字符串，可以保存不超过 63(2^6 -1) 的字符串
 #define LP_ENCODING_6BIT_STR 0x80
 #define LP_ENCODING_6BIT_STR_MASK 0xC0
 #define LP_ENCODING_IS_6BIT_STR(byte) (((byte)&LP_ENCODING_6BIT_STR_MASK)==LP_ENCODING_6BIT_STR)
 
+// 表示元素的实际数据是 13 bit 的整数
+// 0xC0，转换为二进制值是 1100 0000，所以，这个二进制值中的后 5 位和后续的 1 个字节，共 13 位，会用来保存 13bit 的整数。
+// 而该二进制值中的前 3 位 110，则用来表示当前的编码类型
 #define LP_ENCODING_13BIT_INT 0xC0
 #define LP_ENCODING_13BIT_INT_MASK 0xE0
 #define LP_ENCODING_IS_13BIT_INT(byte) (((byte)&LP_ENCODING_13BIT_INT_MASK)==LP_ENCODING_13BIT_INT)
 
+// 12 位保存的是字符串长度，可以保存长度不超过 4095(2^12 -1) 的字符串
 #define LP_ENCODING_12BIT_STR 0xE0
 #define LP_ENCODING_12BIT_STR_MASK 0xF0
 #define LP_ENCODING_IS_12BIT_STR(byte) (((byte)&LP_ENCODING_12BIT_STR_MASK)==LP_ENCODING_12BIT_STR)
 
+/* LP_ENCODING_16BIT_INT、LP_ENCODING_24BIT_INT、LP_ENCODING_32BIT_INT 和 LP_ENCODING_64BIT_INT
+ * 分别用 2 字节（16 bit）、3 字节（24 bit）、4 字节（32 bit）和 8 字节（64 bit）来保存整数数据。
+ * 同时，它们的编码类型本身占 1 字节，编码类型值分别是它们的宏定义值。
+ * */
 #define LP_ENCODING_16BIT_INT 0xF1
 #define LP_ENCODING_16BIT_INT_MASK 0xFF
 #define LP_ENCODING_IS_16BIT_INT(byte) (((byte)&LP_ENCODING_16BIT_INT_MASK)==LP_ENCODING_16BIT_INT)
@@ -82,6 +99,7 @@
 #define LP_ENCODING_64BIT_INT_MASK 0xFF
 #define LP_ENCODING_IS_64BIT_INT(byte) (((byte)&LP_ENCODING_64BIT_INT_MASK)==LP_ENCODING_64BIT_INT)
 
+// 32 位保存的是字符串长度，可以保存 2^32 -1 的长字符串
 #define LP_ENCODING_32BIT_STR 0xF0
 #define LP_ENCODING_32BIT_STR_MASK 0xFF
 #define LP_ENCODING_IS_32BIT_STR(byte) (((byte)&LP_ENCODING_32BIT_STR_MASK)==LP_ENCODING_32BIT_STR)
@@ -204,10 +222,14 @@ int lpStringToInt64(const char *s, unsigned long slen, int64_t *value) {
 /* Create a new, empty listpack.
  * On success the new listpack is returned, otherwise an error is returned. */
 unsigned char *lpNew(void) {
+    //分配LP_HRD_SIZE+1
     unsigned char *lp = lp_malloc(LP_HDR_SIZE+1);
     if (lp == NULL) return NULL;
+    //设置listpack的大小
     lpSetTotalBytes(lp,LP_HDR_SIZE+1);
+    //设置listpack的元素个数，初始值为0
     lpSetNumElements(lp,0);
+    //设置listpack的结尾标识为LP_EOF，值为255
     lp[LP_HDR_SIZE] = LP_EOF;
     return lp;
 }
@@ -293,16 +315,20 @@ int lpEncodeGetType(unsigned char *ele, uint32_t size, unsigned char *intenc, ui
  * The function returns the number of bytes used to encode it, from
  * 1 to 5. If 'buf' is NULL the function just returns the number of bytes
  * needed in order to encode the backlen. */
+// 根据编码类型和实际数据的长度之和，进一步计算列表项最后一部分 entry-len 本身的长度
 unsigned long lpEncodeBacklen(unsigned char *buf, uint64_t l) {
+    // 编码类型和实际数据的总长度小于等于127，entry-len长度为1字节
     if (l <= 127) {
         if (buf) buf[0] = l;
         return 1;
+    //编码类型和实际数据的总长度大于127但小于16383，entry-len长度为2字节
     } else if (l < 16383) {
         if (buf) {
             buf[0] = l>>7;
             buf[1] = (l&127)|128;
         }
         return 2;
+    //编码类型和实际数据的总长度大于16383但小于2097151，entry-len长度为3字节
     } else if (l < 2097151) {
         if (buf) {
             buf[0] = l>>14;
@@ -310,6 +336,7 @@ unsigned long lpEncodeBacklen(unsigned char *buf, uint64_t l) {
             buf[2] = (l&127)|128;
         }
         return 3;
+    //编码类型和实际数据的总长度大于2097151但小于268435455，entry-len长度为4字节
     } else if (l < 268435455) {
         if (buf) {
             buf[0] = l>>21;
@@ -318,6 +345,7 @@ unsigned long lpEncodeBacklen(unsigned char *buf, uint64_t l) {
             buf[3] = (l&127)|128;
         }
         return 4;
+    //否则，entry-len长度为5字节
     } else {
         if (buf) {
             buf[0] = l>>28;
@@ -369,6 +397,7 @@ void lpEncodeString(unsigned char *buf, unsigned char *s, uint32_t len) {
 
 /* Return the encoded length of the listpack element pointed by 'p'. If the
  * element encoding is wrong then 0 is returned. */
+// 根据当前列表项第 1 个字节的取值，来计算当前项的编码类型，并根据编码类型，计算当前项编码类型和实际数据的总长度
 uint32_t lpCurrentEncodedSize(unsigned char *p) {
     if (LP_ENCODING_IS_7BIT_UINT(p[0])) return 1;
     if (LP_ENCODING_IS_6BIT_STR(p[0])) return 1+LP_ENCODING_6BIT_STR_LEN(p);
@@ -388,8 +417,12 @@ uint32_t lpCurrentEncodedSize(unsigned char *p) {
  * listpack, however, while this function is used to implement lpNext(),
  * it does not return NULL when the EOF element is encountered. */
 unsigned char *lpSkip(unsigned char *p) {
+    // 根据当前列表项第 1 个字节的取值，来计算当前项的编码类型，并根据编码类型，计算当前项编码类型和实际数据的总长度
     unsigned long entrylen = lpCurrentEncodedSize(p);
+    // 根据编码类型和实际数据的长度之和，进一步计算列表项最后一部分 entry-len 本身的长度
     entrylen += lpEncodeBacklen(NULL,entrylen);
+    // 知道当前项的编码类型、实际数据和 entry-len 的总长度了，也就可以将当前项指针向右偏移相应的长度，
+    // 从而实现查到下一个列表项的目的
     p += entrylen;
     return p;
 }
@@ -399,6 +432,7 @@ unsigned char *lpSkip(unsigned char *p) {
  * already pointed to the last element of the listpack. */
 unsigned char *lpNext(unsigned char *lp, unsigned char *p) {
     ((void) lp); /* lp is not used for now. However lpPrev() uses it. */
+    // 调用lpSkip函数，偏移指针指向下一个列表项
     p = lpSkip(p);
     if (p[0] == LP_EOF) return NULL;
     return p;
@@ -416,9 +450,12 @@ unsigned char *lpPrev(unsigned char *lp, unsigned char *p) {
 }
 
 /* Return a pointer to the first element of the listpack, or NULL if the
- * listpack has no elements. */
+ * listpack has no elements.
+ 让指针向右偏移 LP_HDR_SIZE 大小，也就是跳过 listpack 头
+  */
 unsigned char *lpFirst(unsigned char *lp) {
-    lp += LP_HDR_SIZE; /* Skip the header. */
+    lp += LP_HDR_SIZE; /* Skip the header. 跳过listpack头部6个字节 */
+    // 如果已经是listpack的末尾结束字节，则返回NULL return lp;}
     if (lp[0] == LP_EOF) return NULL;
     return lp;
 }

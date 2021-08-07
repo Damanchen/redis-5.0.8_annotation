@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "endianconv.h": "c"
-    }
+        "endianconv.h": "c",
+        "cstddef": "c"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
