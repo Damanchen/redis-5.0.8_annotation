@@ -1955,6 +1955,11 @@ unsigned long raxTouch(raxNode *n) {
 }
 
 /*
+Stream 保存的消息数据，按照 key-value 形式来看的话，消息 ID 就相当于 key，而消息内容相当于是 value。
+也就是说，Stream 会使用 Radix Tree 来保存消息 ID，然后将消息内容保存在 listpack 中，并作为消息 ID 的 value，
+用 raxNode 的 value 指针指向对应的 listpack。
+
+
 作为有序索引，Radix Tree 也能提供范围查询，和我们日常使用的 B+ 树，以及第5讲中介绍的跳表相比，你觉得 Radix Tree 有什么优势和不足么？
 
 1、Radix Tree 优势
