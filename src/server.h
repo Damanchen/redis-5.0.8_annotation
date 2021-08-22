@@ -80,13 +80,13 @@ typedef long long ustime_t; /* microsecond time type. */
 
 /* Static server configuration */
 #define CONFIG_DEFAULT_DYNAMIC_HZ 1             /* Adapt hz to # of clients.*/
-#define CONFIG_DEFAULT_HZ        10             /* Time interrupt calls/sec. */
-#define CONFIG_MIN_HZ            1
-#define CONFIG_MAX_HZ            500
+#define CONFIG_DEFAULT_HZ        10             /* Time interrupt calls/sec. server后台任务的默认运行频率 */
+#define CONFIG_MIN_HZ            1              // server后台任务的最小运行频率
+#define CONFIG_MAX_HZ            500            // server后台任务的最大运行频率
 #define MAX_CLIENTS_PER_CLOCK_TICK 200          /* HZ is adapted based on that. */
-#define CONFIG_DEFAULT_SERVER_PORT        6379  /* TCP port. */
+#define CONFIG_DEFAULT_SERVER_PORT        6379  /* TCP port. server监听的默认TCP端口 */
 #define CONFIG_DEFAULT_TCP_BACKLOG       511    /* TCP listen backlog. */
-#define CONFIG_DEFAULT_CLIENT_TIMEOUT       0   /* Default client timeout: infinite */
+#define CONFIG_DEFAULT_CLIENT_TIMEOUT       0   /* Default client timeout: infinite 客户端超时时间，默认为0，表示没有超时限制*/
 #define CONFIG_DEFAULT_DBNUM     16
 #define CONFIG_MAX_LINE    1024
 #define CRON_DBS_PER_CALL 16
