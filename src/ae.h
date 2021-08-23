@@ -69,10 +69,10 @@ typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* File event structure */
 typedef struct aeFileEvent {
-    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) */
-    aeFileProc *rfileProc;
-    aeFileProc *wfileProc;
-    void *clientData;
+    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) 事件类型的掩码 */
+    aeFileProc *rfileProc;  // 指向 AE_READABLE 事件的处理函数 (Reactor 模型中的 handler)
+    aeFileProc *wfileProc;  // 指向 AE_WRITABLE 事件的处理函数
+    void *clientData;       // 指向客户端私有数据的指针
 } aeFileEvent;
 
 /* Time event structure */
@@ -113,16 +113,16 @@ aeEventLoop *aeCreateEventLoop(int setsize);
 void aeDeleteEventLoop(aeEventLoop *eventLoop);
 void aeStop(aeEventLoop *eventLoop);
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
-        aeFileProc *proc, void *clientData);
+        aeFileProc *proc, void *clientData);    // 负责事件和 handler 注册
 void aeDeleteFileEvent(aeEventLoop *eventLoop, int fd, int mask);
 int aeGetFileEvents(aeEventLoop *eventLoop, int fd);
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc);
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
-int aeProcessEvents(aeEventLoop *eventLoop, int flags);
+int aeProcessEvents(aeEventLoop *eventLoop, int flags);     // 负责事件捕获与分发
 int aeWait(int fd, int mask, long long milliseconds);
-void aeMain(aeEventLoop *eventLoop);
+void aeMain(aeEventLoop *eventLoop);    // 框架主循环
 char *aeGetApiName(void);
 void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep);
 void aeSetAfterSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *aftersleep);

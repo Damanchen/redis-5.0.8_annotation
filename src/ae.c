@@ -360,12 +360,14 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
     int processed = 0, numevents;
 
     /* Nothing to do? return ASAP */
+    /* 若没有事件处理，则立刻返回*/
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
     /* Note that we want call select() even if there are no
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
      * to fire. */
+    /*如果有IO事件发生，或者紧急的时间事件发生，则开始处理*/
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;
@@ -408,6 +410,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
+        //调用aeApiPoll函数捕获事件
         numevents = aeApiPoll(eventLoop, tvp);
 
         /* After sleep callback. */
@@ -465,9 +468,11 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         }
     }
     /* Check time events */
+    /* 检查是否有时间事件，若有，则调用processTimeEvents函数处理 */
     if (flags & AE_TIME_EVENTS)
         processed += processTimeEvents(eventLoop);
 
+    /* 返回已经处理的文件或时间事件*/
     return processed; /* return the number of processed file/time events */
 }
 
@@ -493,6 +498,8 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
+// 一个循环不停地判断事件循环的停止标记。
+// 如果事件循环的停止标记被设置为 true，那么针对事件捕获、分发和处理的整个主循环就停止了；否则，主循环会一直执行
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;
     while (!eventLoop->stop) {
