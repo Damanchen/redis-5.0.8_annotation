@@ -69,22 +69,22 @@ typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* File event structure */
 typedef struct aeFileEvent {
-    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) 事件类型的掩码 */
-    aeFileProc *rfileProc;  // 指向 AE_READABLE 事件的处理函数 (Reactor 模型中的 handler)
-    aeFileProc *wfileProc;  // 指向 AE_WRITABLE 事件的处理函数
+    int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) 事件类型的掩码，包括可读事件、可写事件和屏障事件 */
+    aeFileProc *rfileProc;  // 指向 AE_READABLE 事件的处理函数 (Reactor 模型中的 handler)，处理可读事件的回调函数
+    aeFileProc *wfileProc;  // 指向 AE_WRITABLE 事件的处理函数，处理可写事件的回调函数
     void *clientData;       // 指向客户端私有数据的指针
 } aeFileEvent;
 
 /* Time event structure */
 typedef struct aeTimeEvent {
-    long long id; /* time event identifier. */
-    long when_sec; /* seconds */
-    long when_ms; /* milliseconds */
-    aeTimeProc *timeProc;
-    aeEventFinalizerProc *finalizerProc;
-    void *clientData;
-    struct aeTimeEvent *prev;
-    struct aeTimeEvent *next;
+    long long id; /* time event identifier. 时间事件ID */
+    long when_sec; /* seconds 事件到达的秒级时间戳 */
+    long when_ms; /* milliseconds 事件到达的毫秒级时间戳 */
+    aeTimeProc *timeProc;   //时间事件触发后的处理函数
+    aeEventFinalizerProc *finalizerProc;    //事件结束后的处理函数
+    void *clientData;       //事件相关的私有数据
+    struct aeTimeEvent *prev;   //时间事件链表的前向指针
+    struct aeTimeEvent *next;   //时间事件链表的后向指针
 } aeTimeEvent;
 
 /* A fired event */
@@ -99,13 +99,13 @@ typedef struct aeEventLoop {
     int setsize; /* max number of file descriptors tracked */
     long long timeEventNextId;
     time_t lastTime;     /* Used to detect system clock skew */
-    aeFileEvent *events; /* Registered events */
-    aeFiredEvent *fired; /* Fired events */
-    aeTimeEvent *timeEventHead;
+    aeFileEvent *events; /* Registered events IO事件数组 */
+    aeFiredEvent *fired; /* Fired events 已触发事件数组 */
+    aeTimeEvent *timeEventHead;     //记录时间事件的链表头
     int stop;
-    void *apidata; /* This is used for polling API specific data */
-    aeBeforeSleepProc *beforesleep;
-    aeBeforeSleepProc *aftersleep;
+    void *apidata; /* This is used for polling API specific data 和API调用接口相关的数据 */
+    aeBeforeSleepProc *beforesleep;     // 进入事件循环流程前执行的函数
+    aeBeforeSleepProc *aftersleep;      // 退出事件循环流程后执行的函数
 } aeEventLoop;
 
 /* Prototypes */

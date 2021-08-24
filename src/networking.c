@@ -95,6 +95,7 @@ client *createClient(int fd) {
         anetEnableTcpNoDelay(NULL,fd);
         if (server.tcpkeepalive)
             anetKeepAlive(NULL,fd,server.tcpkeepalive);
+        //调用aeCreateFileEvent，监听读事件，对应客户端读写请求，使用readQueryFromclient回调函数处理    
         if (aeCreateFileEvent(server.el,fd,AE_READABLE,
             readQueryFromClient, c) == AE_ERR)
         {
@@ -1084,7 +1085,9 @@ int handleClientsWithPendingWrites(void) {
     listNode *ln;
     int processed = listLength(server.clients_pending_write);
 
+    //获取待写回的客户端列表
     listRewind(server.clients_pending_write,&li);
+    //遍历每一个待写回的客户端
     while((ln = listNext(&li))) {
         client *c = listNodeValue(ln);
         c->flags &= ~CLIENT_PENDING_WRITE;
@@ -1095,10 +1098,12 @@ int handleClientsWithPendingWrites(void) {
         if (c->flags & CLIENT_PROTECTED) continue;
 
         /* Try to write buffers to the client socket. */
+        //调用writeToClient将当前客户端的输出缓冲区数据写回
         if (writeToClient(c->fd,c,0) == C_ERR) continue;
 
         /* If after the synchronous writes above we still have data to
          * output to the client, we need to install the writable handler. */
+        //如果还有待写回数据
         if (clientHasPendingReplies(c)) {
             int ae_flags = AE_WRITABLE;
             /* For the fsync=always policy, we want that a given FD is never
@@ -1111,6 +1116,7 @@ int handleClientsWithPendingWrites(void) {
             {
                 ae_flags |= AE_BARRIER;
             }
+            //创建可写事件的监听，以及设置回调函数
             if (aeCreateFileEvent(server.el, c->fd, ae_flags,
                 sendReplyToClient, c) == AE_ERR)
             {
